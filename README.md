@@ -2,6 +2,26 @@ Little plugin for the [travis cli](https://github.com/travis-ci/travis#command-l
 
 # Usage
 
+    Manage pull request testing for a repository.
+
+    Available subcommands: enable, disable, show
+    Usage: travis pr [subcommand] [options]
+        -h, --help                       Display help
+        -i, --[no-]interactive           be interactive and colorful
+        -E, --[no-]explode               don't rescue exceptions
+            --skip-version-check         don't check if travis client is up to date
+        -e, --api-endpoint URL           Travis API server to talk to
+        -I, --[no-]insecure              do not verify SSL certificate of API endpoint
+            --pro                        short-cut for --api-endpoint 'https://api.travis-ci.com/'
+            --org                        short-cut for --api-endpoint 'https://api.travis-ci.org/'
+        -t, --token [ACCESS_TOKEN]       access token to use
+            --debug                      show API requests
+        -X, --enterprise [NAME]          use enterprise setup (optionally takes name for multiple setups)
+            --adapter ADAPTER            Faraday adapter to use for HTTP requests
+        -r, --repo SLUG                  repository to use (will try to detect from current git clone)
+            --github-token TOKEN         identify by GitHub token
+        -f, --force-login                force a proper login handshake with github
+
 You can check if pull request testing is currently enabled or disabled by running `travis pr` or `travis pr show`. You can disable/enable pull request testing by running `travis pr enable`/`travis pr disable`.
 
     $ travis pr
