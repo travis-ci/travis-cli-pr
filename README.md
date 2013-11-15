@@ -35,7 +35,7 @@ If you are not running the command from within the project directory, add the `-
     Pull Request testing has been disabled for travis-ci/travis.
 
 
-If you run this on Travis Enterprise, don't forget the `-X` version the first time you use this command on a repository.
+If you run this on Travis Enterprise, don't forget the `-X` flag the first time you use this command on a repository.
 
     $ travis pr disable -r secret/project -X
     Pull Request testing has been disabled for travis-ci/travis.
