@@ -1,5 +1,6 @@
 require 'travis/cli'
 require 'travis/tools/token_finder'
+require 'digest/sha2'
 require 'json'
 
 module Travis
@@ -12,11 +13,11 @@ module Travis
       attr_accessor :github_login, :github_password, :github_token, :github_otp
 
       def help
-        super("\nAvailable subcommands: enable, disable, show\n")
+        super("\nAvailable subcommands: enable, disable, show, signature and token\n")
       end
 
       def run(subcommand = 'show')
-        error "unknown command %p" % subcommand unless %w[enable disable show].include? subcommand
+        error "unknown command %p" % subcommand unless %w[enable disable show signature token].include? subcommand
 
         load_gh
         self.github_token   = generate_github_token if force_login?
@@ -40,6 +41,15 @@ module Travis
       def enable
         GH.patch(link, :add_events => ['pull_request']) unless enabled?
         say "enabled", "Pull Request testing has been %s for #{repository.slug}."
+      end
+
+      def token
+        say hook["config"]["token"], "Travis CI token used for #{repository.slug}: %s"
+      end
+
+      def signature
+        signature = Digest::SHA2.hexdigest(repository.slug + hook["config"]["token"])
+        say signature, "Signature used for #{repository.slug} web hooks: %s"
       end
 
       private
