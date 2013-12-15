@@ -1,7 +1,4 @@
 require 'travis/cli'
-require 'travis/tools/token_finder'
-require 'digest/sha2'
-require 'json'
 
 module Travis
   module CLI
@@ -10,22 +7,33 @@ module Travis
       on '--github-token TOKEN', 'identify by GitHub token'
       on '-f', '--force-login', 'force a proper login handshake with github'
 
-      attr_accessor :github_login, :github_password, :github_token, :github_otp
-
-      def help
-        super("\nAvailable subcommands: enable, disable, show, signature and token\n")
+      def run(subcommand = 'show')
+        error "requires cli version 1.6.4 or newer" if Travis::VERSION < "1.6.4" and not skip_version_check?
+        error "unknown command %p" % subcommand unless %w[enable disable show signature token].include? subcommand
+        github.with_session do |token|
+          send subcommand
+          endpoint_config['pr_token'] = token
+        end
       end
 
-      def run(subcommand = 'show')
-        error "unknown command %p" % subcommand unless %w[enable disable show signature token].include? subcommand
-
-        load_gh
-        self.github_token   = generate_github_token if force_login?
-        self.github_token ||= endpoint_config['pr_token']
-        self.github_token ||= Travis::Tools::TokenFinder.find(:explode => explode?, :github => github_endpoint.host)
-        self.github_token ||= generate_github_token
-        GH.with(:token => github_token) { send(subcommand) }
-        endpoint_config['pr_token'] = github_token
+      def github
+        @github ||= begin
+          load_gh
+          require 'travis/tools/github'
+          Tools::Github.new(session.config['github']) do |g|
+            g.note           = "token for travis-cli-pr"
+            g.github_token   = github_token
+            g.github_token ||= endpoint_config['pr_token'] unless force_login?
+            g.auto_token     = !force_login?
+            g.auto_password  = !force_login?
+            g.ask_login      = proc { ask("Username: ") }
+            g.ask_password   = proc { |user| ask("Password for #{user}: ") { |q| q.echo = "*" } }
+            g.ask_otp        = proc { |user| ask("Two-factor authentication code for #{user}: ") }
+            g.login_header   = proc { say "You need to log in on #{color(github_endpoint.host, :info)}." }
+            g.debug          = proc { |log| debug(log) }
+            g.after_tokens   = proc { g.explode = true and error("no suitable github token found") }
+          end
+        end
       end
 
       def show
@@ -48,6 +56,7 @@ module Travis
       end
 
       def signature
+        require 'digest/sha2'
         signature = Digest::SHA2.hexdigest(repository.slug + hook["config"]["token"])
         say signature, "Signature used for #{repository.slug} web hooks: %s"
       end
@@ -66,41 +75,6 @@ module Travis
 
         def enabled?
           hook['events'].include? 'pull_request'
-        end
-
-        def generate_github_token
-          ask_info
-          options           = { :username => github_login, :password => github_password }
-          options[:headers] = { "X-GitHub-OTP" => github_otp } if github_otp
-          gh                = GH.with(options)
-          reply             = gh.post('/authorizations', :scopes => [org? ? 'public_repo' : 'repo'], :note => "token for enabling/disabling pull request testing")
-          self.github_token = reply['token']
-        rescue GH::Error => error
-          if error.info[:response_status] == 401
-            ask_2fa
-            generate_github_token
-          else
-            raise error if explode?
-            error(JSON.parse(error.info[:response_body])["message"])
-          end
-        end
-
-        def ask_info
-          return if !github_login.nil?
-          say "We need your #{color("GitHub login", :important)} to identify you."
-          say "This information will #{color("not be sent to Travis CI", :important)}, only to #{color(github_endpoint.host, :info)}."
-          say "The password will not be displayed."
-          empty_line
-          say "Try running with #{color("--github-token", :info)} if you don't want to enter your password anyway."
-          empty_line
-          self.github_login    = ask("Username: ")
-          self.github_password = ask("Password: ") { |q| q.echo = "*" }
-          empty_line
-        end
-
-        def ask_2fa
-          self.github_otp = ask "Two-factor authentication code: "
-          empty_line
         end
     end
   end
