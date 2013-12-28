@@ -1,3 +1,6 @@
+### This plugin has been deprecated, please use the [`travis settings`](https://github.com/travis-ci/travis#settings) command and the [GitHub plugin](https://github.com/travis-ci/travis-cli-gh) instead.
+
+
 Little plugin for the [travis cli](https://github.com/travis-ci/travis#command-line-client) wrapping GitHub's [Repo Hooks API](http://developer.github.com/v3/repos/hooks/) to enable/disable pull request testing for a repository (and a few more things using that API).
 
 # Usage
